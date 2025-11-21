@@ -8,57 +8,24 @@
     :root { --bg:#f5f5f5; --card:#fff; --muted:#666; --accent:#2b6cb0; }
     body { font-family: Arial, sans-serif; margin:0; padding:20px; background:var(--bg); color:#111; }
     #app { max-width:900px; margin:auto; background:var(--card); padding:20px; border-radius:10px; }
-
-    /* HEADER */
-    header { text-align:center; margin-bottom:20px; }
-    header img { max-width:350px; width:100%; margin-bottom:10px; }
-
-    nav button {
-      margin-left:8px;
-      padding:8px 14px;
-      cursor:pointer;
-      border-radius:6px;
-      border:1px solid #ccc;
-      background:#fff;
-    }
-
-    textarea {
-      width:100%; min-height:110px; margin-top:10px;
-      padding:10px; border-radius:8px; border:1px solid #ddd;
-    }
-
-    select {
-      padding:8px; border-radius:6px; border:1px solid #ccc;
-      width:100%; margin-top:10px;
-    }
-
-    .btn {
-      padding:10px 14px; border:none; cursor:pointer;
-      border-radius:8px; background:var(--accent); color:#fff;
-    }
+    header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; }
+    nav button { margin-left:8px; padding:8px 14px; cursor:pointer; border-radius:6px; border:1px solid #ccc; background:#fff; }
+    textarea { width:100%; min-height:110px; margin-top:10px; padding:10px; border-radius:8px; border:1px solid #ddd; }
+    select { padding:8px; border-radius:6px; border:1px solid #ccc; width:100%; margin-top:10px; }
+    .btn { padding:10px 14px; border:none; cursor:pointer; border-radius:8px; background:var(--accent); color:#fff; }
     .btn.alt { background:#e6e6e6; color:#111; }
-
-    .review {
-      background:#fafafa; padding:12px; margin-top:10px;
-      border-radius:8px; border:1px solid #eee;
-    }
-
+    .review { background:#fafafa; padding:12px; margin-top:10px; border-radius:8px; border:1px solid #eee; }
     .hidden { display:none; }
     .muted { color:var(--muted); }
-
-    input[type=password], input[type=text] {
-      padding:8px; border-radius:6px; border:1px solid #ccc;
-      width:100%; margin-top:10px;
-    }
+    input[type=password], input[type=text] { padding:8px; border-radius:6px; border:1px solid #ccc; width:100%; margin-top:10px; }
   </style>
 </head>
 <body>
 
 <div id="app">
 
-  <!-- LOGO ADDED HERE -->
   <header>
-    <img src="Nancefield new Logo.png" alt="Nancefield Paints Logo">
+    <h2>Anonymous Review System</h2>
     <nav>
       <button onclick="showPage('user')">📝 Send Review</button>
       <button onclick="showPage('admin')">🔐 Admin</button>
@@ -87,6 +54,7 @@
   <section id="page-admin" class="hidden">
     <h3>Admin Login</h3>
 
+    <!-- FIXED LOGIN -->
     <div id="loginBox">
       <p>Admin Username: <b>admin</b></p>
       <input id="loginPwd" type="password" placeholder="Enter Password">
@@ -94,6 +62,7 @@
       <p id="loginError" class="muted hidden" style="color:red"></p>
     </div>
 
+    <!-- ADMIN CONTROLS -->
     <div id="adminControls" class="hidden">
       <button class="btn alt" onclick="refreshInbox()">Refresh</button>
       <button class="btn alt" onclick="exportInbox()">Export CSV</button>
@@ -109,17 +78,22 @@
 </div>
 
 <script>
+/* ===== CONSTANT ADMIN CREDENTIALS ===== */
 const ADMIN_USER = "admin";
-const ADMIN_PASS = "NP@123#";
+const ADMIN_PASS = "NP@123#";   // FIXED PASSWORD
+
+/* Storage */
 const KEY_INBOX = "adminInbox";
 const SESSION = "adminLoggedIn";
 
+/* ===== Page switching ===== */
 function showPage(p) {
   document.getElementById("page-user").classList.add("hidden");
   document.getElementById("page-admin").classList.add("hidden");
   document.getElementById("page-" + p).classList.remove("hidden");
 }
 
+/* ===== User Review Submission ===== */
 function sendReview() {
   let text = reviewInput.value.trim();
   let rating = ratingInput.value;
@@ -140,6 +114,7 @@ function sendReview() {
   alert("Review sent to admin ✔");
 }
 
+/* ===== Admin Login ===== */
 function attemptLogin() {
   let pwd = loginPwd.value;
 
@@ -154,6 +129,7 @@ function attemptLogin() {
   }
 }
 
+/* ===== Inbox Display ===== */
 function refreshInbox() {
   let data = JSON.parse(localStorage.getItem(KEY_INBOX) || "[]");
 
@@ -169,6 +145,7 @@ function refreshInbox() {
   : "<p class='muted'>No reviews yet</p>";
 }
 
+/* ===== Delete Single Review ===== */
 function delReview(id) {
   if (!confirm("Delete this review?")) return;
   let data = JSON.parse(localStorage.getItem(KEY_INBOX));
@@ -177,12 +154,14 @@ function delReview(id) {
   refreshInbox();
 }
 
+/* ===== Clear All ===== */
 function clearAll() {
   if (!confirm("Clear ALL reviews?")) return;
   localStorage.setItem(KEY_INBOX, "[]");
   refreshInbox();
 }
 
+/* ===== Export CSV ===== */
 function exportInbox() {
   let arr = JSON.parse(localStorage.getItem(KEY_INBOX) || "[]");
   if (!arr.length) return alert("Nothing to export");
@@ -200,6 +179,7 @@ function exportInbox() {
   URL.revokeObjectURL(url);
 }
 
+/* ===== Logout ===== */
 function logout() {
   sessionStorage.removeItem(SESSION);
   loginBox.classList.remove("hidden");
