@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Anonymous Review System — Admin Only</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root { --bg:#f5f5f5; --card:#fff; --muted:#666; --accent:#2b6cb0; }
+    body { font-family: Arial, sans-serif; margin:0; padding:20px; background:var(--bg); color:#111; }
+    #app { max-width:900px; margin:auto; background:var(--card); padding:20px; border-radius:10px; }
+
+    /* HEADER */
+    header { text-align:center; margin-bottom:20px; }
+    header img { max-width:350px; width:100%; margin-bottom:10px; }
+
+    nav button {
+      margin-left:8px;
+      padding:8px 14px;
+      cursor:pointer;
+      border-radius:6px;
+      border:1px solid #ccc;
+      background:#fff;
+    }
+
+    textarea {
+      width:100%; min-height:110px; margin-top:10px;
+      padding:10px; border-radius:8px; border:1px solid #ddd;
+    }
+
+    select {
+      padding:8px; border-radius:6px; border:1px solid #ccc;
+      width:100%; margin-top:10px;
+    }
+
+    .btn {
+      padding:10px 14px; border:none; cursor:pointer;
+      border-radius:8px; background:var(--accent); color:#fff;
+    }
+    .btn.alt { background:#e6e6e6; color:#111; }
+
+    .review {
+      background:#fafafa; padding:12px; margin-top:10px;
+      border-radius:8px; border:1px solid #eee;
+    }
+
+    .hidden { display:none; }
+    .muted { color:var(--muted); }
+
+    input[type=password], input[type=text] {
+      padding:8px; border-radius:6px; border:1px solid #ccc;
+      width:100%; margin-top:10px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- LOGO ADDED HERE -->
+  <header>
+    <img src="Nancefield new Logo.png" alt="Nancefield Paints Logo">
+    <nav>
+      <button onclick="showPage('user')">📝 Send Review</button>
+      <button onclick="showPage('admin')">🔐 Admin</button>
+    </nav>
+  </header>
+
+  <!-- USER PAGE -->
+  <section id="page-user">
+    <h3>Send Anonymous Review</h3>
+    <p class="muted">Your message is anonymous and sent only to the admin.</p>
+
+    <label>Rating:</label>
+    <select id="ratingInput">
+      <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+      <option value="4">⭐⭐⭐⭐ (4)</option>
+      <option value="3">⭐⭐⭐ (3)</option>
+      <option value="2">⭐⭐ (2)</option>
+      <option value="1">⭐ (1)</option>
+    </select>
+
+    <textarea id="reviewInput" placeholder="Write your review..."></textarea>
+    <button class="btn" onclick="sendReview()">Send</button>
+  </section>
+
+  <!-- ADMIN PAGE -->
+  <section id="page-admin" class="hidden">
+    <h3>Admin Login</h3>
+
+    <div id="loginBox">
+      <p>Admin Username: <b>admin</b></p>
+      <input id="loginPwd" type="password" placeholder="Enter Password">
+      <button class="btn" onclick="attemptLogin()">Login</button>
+      <p id="loginError" class="muted hidden" style="color:red"></p>
+    </div>
+
+    <div id="adminControls" class="hidden">
+      <button class="btn alt" onclick="refreshInbox()">Refresh</button>
+      <button class="btn alt" onclick="exportInbox()">Export CSV</button>
+      <button class="btn alt" onclick="clearAll()">Clear All</button>
+      <button class="btn" onclick="logout()">Logout</button>
+
+      <h4 style="margin-top:20px;">Inbox:</h4>
+      <div id="adminInbox"></div>
+    </div>
+
+  </section>
+
+</div>
+
+<script>
+const ADMIN_USER = "admin";
+const ADMIN_PASS = "NP@123#";
+const KEY_INBOX = "adminInbox";
+const SESSION = "adminLoggedIn";
+
+function showPage(p) {
+  document.getElementById("page-user").classList.add("hidden");
+  document.getElementById("page-admin").classList.add("hidden");
+  document.getElementById("page-" + p).classList.remove("hidden");
+}
+
+function sendReview() {
+  let text = reviewInput.value.trim();
+  let rating = ratingInput.value;
+
+  if (!text) return alert("Write something first");
+
+  let inbox = JSON.parse(localStorage.getItem(KEY_INBOX) || "[]");
+  inbox.unshift({
+    id: Date.now(),
+    time: new Date().toLocaleString(),
+    msg: text,
+    rating: rating
+  });
+  localStorage.setItem(KEY_INBOX, JSON.stringify(inbox));
+
+  reviewInput.value = "";
+  ratingInput.value = "5";
+  alert("Review sent to admin ✔");
+}
+
+function attemptLogin() {
+  let pwd = loginPwd.value;
+
+  if (pwd === ADMIN_PASS) {
+    sessionStorage.setItem(SESSION, "1");
+    loginBox.classList.add("hidden");
+    adminControls.classList.remove("hidden");
+    refreshInbox();
+  } else {
+    loginError.innerText = "Incorrect password";
+    loginError.classList.remove("hidden");
+  }
+}
+
+function refreshInbox() {
+  let data = JSON.parse(localStorage.getItem(KEY_INBOX) || "[]");
+
+  adminInbox.innerHTML = data.length ?
+    data.map(r => `
+      <div class="review" id="r${r.id}">
+        <b>${r.time}</b><br>
+        <b>Rating:</b> ${"⭐".repeat(r.rating)}<br><br>
+        <p>${r.msg}</p>
+        <button class="btn alt" onclick="delReview(${r.id})">Delete</button>
+      </div>
+    `).join("")
+  : "<p class='muted'>No reviews yet</p>";
+}
+
+function delReview(id) {
+  if (!confirm("Delete this review?")) return;
+  let data = JSON.parse(localStorage.getItem(KEY_INBOX));
+  data = data.filter(r => r.id !== id);
+  localStorage.setItem(KEY_INBOX, JSON.stringify(data));
+  refreshInbox();
+}
+
+function clearAll() {
+  if (!confirm("Clear ALL reviews?")) return;
+  localStorage.setItem(KEY_INBOX, "[]");
+  refreshInbox();
+}
+
+function exportInbox() {
+  let arr = JSON.parse(localStorage.getItem(KEY_INBOX) || "[]");
+  if (!arr.length) return alert("Nothing to export");
+
+  let csv = "id,time,rating,message\n" +
+    arr.map(r => `${r.id},"${r.time}",${r.rating},"${r.msg.replace(/"/g, '""')}"`).join("\n");
+
+  let blob = new Blob([csv], { type: "text/csv" });
+  let url = URL.createObjectURL(blob);
+
+  let a = document.createElement("a");
+  a.href = url;
+  a.download = "reviews.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function logout() {
+  sessionStorage.removeItem(SESSION);
+  loginBox.classList.remove("hidden");
+  adminControls.classList.add("hidden");
+}
+</script>
+
+</body>
+</html>
