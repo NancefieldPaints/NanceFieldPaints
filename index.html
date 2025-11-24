@@ -5,186 +5,132 @@
   <title>Anonymous Review System — Admin Only</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    :root { --bg:#f5f5f5; --card:#fff; --muted:#666; --accent:#2b6cb0; }
-    body { font-family: Arial, sans-serif; margin:0; padding:20px; background:var(--bg); color:#111; }
-    #app { max-width:900px; margin:auto; background:var(--card); padding:20px; border-radius:10px; }
-    header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; }
-    nav button { margin-left:8px; padding:8px 14px; cursor:pointer; border-radius:6px; border:1px solid #ccc; background:#fff; }
-    textarea { width:100%; min-height:110px; margin-top:10px; padding:10px; border-radius:8px; border:1px solid #ddd; }
-    select { padding:8px; border-radius:6px; border:1px solid #ccc; width:100%; margin-top:10px; }
-    .btn { padding:10px 14px; border:none; cursor:pointer; border-radius:8px; background:var(--accent); color:#fff; }
-    .btn.alt { background:#e6e6e6; color:#111; }
-    .review { background:#fafafa; padding:12px; margin-top:10px; border-radius:8px; border:1px solid #eee; }
-    .hidden { display:none; }
-    .muted { color:var(--muted); }
-    input[type=password], input[type=text] { padding:8px; border-radius:6px; border:1px solid #ccc; width:100%; margin-top:10px; }
+    :root { 
+      --bg:#f5f5f5; 
+      --card:#fff; 
+      --muted:#666; 
+      --accent:#2b6cb0; 
+    }
+
+    body { 
+      font-family: Arial, sans-serif; 
+      background: var(--bg); 
+      margin: 0; 
+      padding: 0; 
+    }
+
+    header { 
+      background: var(--card); 
+      padding: 20px; 
+      text-align: center; 
+      border-bottom: 2px solid #ddd; 
+    }
+
+    #logo {
+      display: block;
+      margin: 0 auto 10px auto;
+      max-width: 180px;
+    }
+
+    h2 { margin: 10px 0; }
+
+    nav button {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      background: var(--accent);
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    nav button:hover { opacity: 0.9; }
+
+    .page { display: none; padding: 20px; }
+    #user textarea { width: 100%; height: 150px; }
+
+    #admin button { padding: 10px; margin-bottom: 15px; }
+
+    .review {
+      background: var(--card);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-left: 4px solid var(--accent);
+    }
+
   </style>
 </head>
 <body>
 
-<div id="app">
+<header>
+  <img id="logo" src="nancefieldlogo.png" alt="Nancefield Paints Logo">
+  <h2>Anonymous Review System</h2>
+  <nav>
+    <button onclick="showPage('user')">📝 Send Review</button>
+    <button onclick="showPage('admin')">🔐 Admin</button>
+  </nav>
+</header>
 
-  <header>
-    <h2>Anonymous Review System</h2>
-    <nav>
-      <button onclick="showPage('user')">📝 Send Review</button>
-      <button onclick="showPage('admin')">🔐 Admin</button>
-    </nav>
-  </header>
+<div id="user" class="page">
+  <h3>Write Your Review</h3>
+  <textarea id="reviewText" placeholder="Enter your anonymous review here..."></textarea>
+  <br><br>
+  <button onclick="submitReview()">Submit</button>
+</div>
 
-  <!-- USER PAGE -->
-  <section id="page-user">
-    <h3>Send Anonymous Review</h3>
-    <p class="muted">Your message is anonymous and sent only to the admin.</p>
+<div id="admin" class="page">
+  <h3>Admin Panel</h3>
+  <input type="password" id="adminPass" placeholder="Enter admin password">
+  <button onclick="login()">Login</button>
 
-    <label>Rating:</label>
-    <select id="ratingInput">
-      <option value="5">⭐⭐⭐⭐⭐ (5)</option>
-      <option value="4">⭐⭐⭐⭐ (4)</option>
-      <option value="3">⭐⭐⭐ (3)</option>
-      <option value="2">⭐⭐ (2)</option>
-      <option value="1">⭐ (1)</option>
-    </select>
-
-    <textarea id="reviewInput" placeholder="Write your review..."></textarea>
-    <button class="btn" onclick="sendReview()">Send</button>
-  </section>
-
-  <!-- ADMIN PAGE -->
-  <section id="page-admin" class="hidden">
-    <h3>Admin Login</h3>
-
-    <!-- FIXED LOGIN -->
-    <div id="loginBox">
-      <p>Admin Username: <b>admin</b></p>
-      <input id="loginPwd" type="password" placeholder="Enter Password">
-      <button class="btn" onclick="attemptLogin()">Login</button>
-      <p id="loginError" class="muted hidden" style="color:red"></p>
-    </div>
-
-    <!-- ADMIN CONTROLS -->
-    <div id="adminControls" class="hidden">
-      <button class="btn alt" onclick="refreshInbox()">Refresh</button>
-      <button class="btn alt" onclick="exportInbox()">Export CSV</button>
-      <button class="btn alt" onclick="clearAll()">Clear All</button>
-      <button class="btn" onclick="logout()">Logout</button>
-
-      <h4 style="margin-top:20px;">Inbox:</h4>
-      <div id="adminInbox"></div>
-    </div>
-
-  </section>
-
+  <div id="adminContent" style="display:none; margin-top:20px;">
+    <h3>All Reviews</h3>
+    <div id="reviewsList"></div>
+  </div>
 </div>
 
 <script>
-/* ===== CONSTANT ADMIN CREDENTIALS ===== */
-const ADMIN_USER = "admin";
-const ADMIN_PASS = "NP@123#";   // FIXED PASSWORD
+  const PASSWORD = "admin123";
 
-/* Storage */
-const KEY_INBOX = "adminInbox";
-const SESSION = "adminLoggedIn";
-
-/* ===== Page switching ===== */
-function showPage(p) {
-  document.getElementById("page-user").classList.add("hidden");
-  document.getElementById("page-admin").classList.add("hidden");
-  document.getElementById("page-" + p).classList.remove("hidden");
-}
-
-/* ===== User Review Submission ===== */
-function sendReview() {
-  let text = reviewInput.value.trim();
-  let rating = ratingInput.value;
-
-  if (!text) return alert("Write something first");
-
-  let inbox = JSON.parse(localStorage.getItem(KEY_INBOX) || "[]");
-  inbox.unshift({
-    id: Date.now(),
-    time: new Date().toLocaleString(),
-    msg: text,
-    rating: rating
-  });
-  localStorage.setItem(KEY_INBOX, JSON.stringify(inbox));
-
-  reviewInput.value = "";
-  ratingInput.value = "5";
-  alert("Review sent to admin ✔");
-}
-
-/* ===== Admin Login ===== */
-function attemptLogin() {
-  let pwd = loginPwd.value;
-
-  if (pwd === ADMIN_PASS) {
-    sessionStorage.setItem(SESSION, "1");
-    loginBox.classList.add("hidden");
-    adminControls.classList.remove("hidden");
-    refreshInbox();
-  } else {
-    loginError.innerText = "Incorrect password";
-    loginError.classList.remove("hidden");
+  function showPage(page) {
+    document.querySelectorAll('.page').forEach(p => p.style.display = "none");
+    document.getElementById(page).style.display = "block";
   }
-}
 
-/* ===== Inbox Display ===== */
-function refreshInbox() {
-  let data = JSON.parse(localStorage.getItem(KEY_INBOX) || "[]");
+  showPage('user');
 
-  adminInbox.innerHTML = data.length ?
-    data.map(r => `
-      <div class="review" id="r${r.id}">
-        <b>${r.time}</b><br>
-        <b>Rating:</b> ${"⭐".repeat(r.rating)}<br><br>
-        <p>${r.msg}</p>
-        <button class="btn alt" onclick="delReview(${r.id})">Delete</button>
-      </div>
-    `).join("")
-  : "<p class='muted'>No reviews yet</p>";
-}
+  function submitReview() {
+    const text = document.getElementById("reviewText").value.trim();
+    if (!text) return alert("Please enter a review!");
+    let reviews = JSON.parse(localStorage.getItem("reviews") || "[]");
+    reviews.push({ text, date: new Date().toLocaleString() });
+    localStorage.setItem("reviews", JSON.stringify(reviews));
+    document.getElementById("reviewText").value = "";
+    alert("Review submitted!");
+  }
 
-/* ===== Delete Single Review ===== */
-function delReview(id) {
-  if (!confirm("Delete this review?")) return;
-  let data = JSON.parse(localStorage.getItem(KEY_INBOX));
-  data = data.filter(r => r.id !== id);
-  localStorage.setItem(KEY_INBOX, JSON.stringify(data));
-  refreshInbox();
-}
+  function login() {
+    const pass = document.getElementById("adminPass").value;
+    if (pass !== PASSWORD) return alert("Incorrect Password");
+    document.getElementById("adminContent").style.display = "block";
+    loadReviews();
+  }
 
-/* ===== Clear All ===== */
-function clearAll() {
-  if (!confirm("Clear ALL reviews?")) return;
-  localStorage.setItem(KEY_INBOX, "[]");
-  refreshInbox();
-}
-
-/* ===== Export CSV ===== */
-function exportInbox() {
-  let arr = JSON.parse(localStorage.getItem(KEY_INBOX) || "[]");
-  if (!arr.length) return alert("Nothing to export");
-
-  let csv = "id,time,rating,message\n" +
-    arr.map(r => `${r.id},"${r.time}",${r.rating},"${r.msg.replace(/"/g, '""')}"`).join("\n");
-
-  let blob = new Blob([csv], { type: "text/csv" });
-  let url = URL.createObjectURL(blob);
-
-  let a = document.createElement("a");
-  a.href = url;
-  a.download = "reviews.csv";
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-/* ===== Logout ===== */
-function logout() {
-  sessionStorage.removeItem(SESSION);
-  loginBox.classList.remove("hidden");
-  adminControls.classList.add("hidden");
-}
+  function loadReviews() {
+    let reviews = JSON.parse(localStorage.getItem("reviews") || "[]");
+    let html = "";
+    reviews.forEach((r, i) => {
+      html += `
+        <div class="review">
+          <strong>Review #${i+1}</strong><br>
+          <small>${r.date}</small><br><br>
+          ${r.text}
+        </div>
+      `;
+    });
+    document.getElementById("reviewsList").innerHTML = html;
+  }
 </script>
 
 </body>
