@@ -10,6 +10,7 @@
       --card:#fff; 
       --muted:#666; 
       --accent:#2b6cb0; 
+      --star:#f4c542;
     }
 
     body { 
@@ -47,9 +48,15 @@
     nav button:hover { opacity: 0.9; }
 
     .page { display: none; padding: 20px; }
-    #user textarea { width: 100%; height: 150px; }
 
-    #admin button { padding: 10px; margin-bottom: 15px; }
+    textarea { 
+      width: 100%; 
+      height: 150px; 
+      padding: 10px; 
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
 
     .review {
       background: var(--card);
@@ -57,6 +64,22 @@
       padding: 15px;
       margin-bottom: 15px;
       border-left: 4px solid var(--accent);
+    }
+
+    /* ⭐ Star Rating */
+    .stars {
+      font-size: 30px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .star {
+      color: #ccc;
+      transition: 0.2s;
+    }
+
+    .star.selected {
+      color: var(--star);
     }
 
   </style>
@@ -72,13 +95,26 @@
   </nav>
 </header>
 
+<!-- ⭐ USER REVIEW PAGE -->
 <div id="user" class="page">
   <h3>Write Your Review</h3>
+
+  <label>Rating:</label><br>
+  <div id="ratingStars" class="stars">
+    <span class="star" data-value="1">&#9733;</span>
+    <span class="star" data-value="2">&#9733;</span>
+    <span class="star" data-value="3">&#9733;</span>
+    <span class="star" data-value="4">&#9733;</span>
+    <span class="star" data-value="5">&#9733;</span>
+  </div>
+
+  <br>
   <textarea id="reviewText" placeholder="Enter your anonymous review here..."></textarea>
   <br><br>
   <button onclick="submitReview()">Submit</button>
 </div>
 
+<!-- ⭐ ADMIN PAGE -->
 <div id="admin" class="page">
   <h3>Admin Panel</h3>
   <input type="password" id="adminPass" placeholder="Enter admin password">
@@ -91,7 +127,8 @@
 </div>
 
 <script>
-  const PASSWORD = "admin123";
+  const PASSWORD = "NP@123#";
+  let selectedRating = 0;
 
   function showPage(page) {
     document.querySelectorAll('.page').forEach(p => p.style.display = "none");
@@ -100,16 +137,44 @@
 
   showPage('user');
 
+  /* ⭐ Star Rating Logic */
+  document.querySelectorAll(".star").forEach(star => {
+    star.addEventListener("click", function() {
+      selectedRating = parseInt(this.dataset.value);
+
+      document.querySelectorAll(".star").forEach(s => {
+        s.classList.remove("selected");
+        if (parseInt(s.dataset.value) <= selectedRating) {
+          s.classList.add("selected");
+        }
+      });
+    });
+  });
+
+  /* ⭐ Submit Review */
   function submitReview() {
     const text = document.getElementById("reviewText").value.trim();
     if (!text) return alert("Please enter a review!");
+    if (selectedRating === 0) return alert("Please choose a rating!");
+
     let reviews = JSON.parse(localStorage.getItem("reviews") || "[]");
-    reviews.push({ text, date: new Date().toLocaleString() });
+    reviews.push({ 
+      text, 
+      rating: selectedRating,
+      date: new Date().toLocaleString() 
+    });
+
     localStorage.setItem("reviews", JSON.stringify(reviews));
+
     document.getElementById("reviewText").value = "";
+    selectedRating = 0;
+
+    document.querySelectorAll(".star").forEach(s => s.classList.remove("selected"));
+
     alert("Review submitted!");
   }
 
+  /* ⭐ Admin Login */
   function login() {
     const pass = document.getElementById("adminPass").value;
     if (pass !== PASSWORD) return alert("Incorrect Password");
@@ -117,6 +182,7 @@
     loadReviews();
   }
 
+  /* ⭐ Load Reviews */
   function loadReviews() {
     let reviews = JSON.parse(localStorage.getItem("reviews") || "[]");
     let html = "";
@@ -124,7 +190,9 @@
       html += `
         <div class="review">
           <strong>Review #${i+1}</strong><br>
-          <small>${r.date}</small><br><br>
+          <small>${r.date}</small><br>
+          <div style="color:#f4c542;">⭐ ${r.rating}/5</div>
+          <br>
           ${r.text}
         </div>
       `;
