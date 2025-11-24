@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Anonymous Review System — Admin Only</title>
+  <title>Anonymous Review System — Admin</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root { 
@@ -17,7 +17,6 @@
       font-family: Arial, sans-serif; 
       background: var(--bg); 
       margin: 0; 
-      padding: 0; 
     }
 
     header { 
@@ -29,11 +28,9 @@
 
     #logo {
       display: block;
-      margin: 0 auto 10px auto;
+      margin: 0 auto 10px;
       max-width: 180px;
     }
-
-    h2 { margin: 10px 0; }
 
     nav button {
       padding: 10px 20px;
@@ -45,14 +42,12 @@
       cursor: pointer;
     }
 
-    nav button:hover { opacity: 0.9; }
-
     .page { display: none; padding: 20px; }
 
     textarea { 
       width: 100%; 
       height: 150px; 
-      padding: 10px; 
+      padding: 10px;
       border-radius: 6px;
       border: 1px solid #ccc;
       font-size: 16px;
@@ -66,6 +61,16 @@
       border-left: 4px solid var(--accent);
     }
 
+    .deleteBtn {
+      background: red;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      float:right;
+      cursor: pointer;
+    }
+
     /* ⭐ Star Rating */
     .stars {
       font-size: 30px;
@@ -73,22 +78,26 @@
       user-select: none;
     }
 
-    .star {
-      color: #ccc;
-      transition: 0.2s;
-    }
+    .star { color: #ccc; }
+    .star.selected { color: var(--star); }
 
-    .star.selected {
-      color: var(--star);
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      margin-bottom: 10px;
     }
 
   </style>
 </head>
+
 <body>
 
 <header>
   <img id="logo" src="nancefieldlogo.png" alt="Nancefield Paints Logo">
   <h2>Anonymous Review System</h2>
+
   <nav>
     <button onclick="showPage('user')">📝 Send Review</button>
     <button onclick="showPage('admin')">🔐 Admin</button>
@@ -109,20 +118,35 @@
   </div>
 
   <br>
-  <textarea id="reviewText" placeholder="Enter your anonymous review here..."></textarea>
+  <textarea id="reviewText" placeholder="Enter your anonymous review..."></textarea>
   <br><br>
   <button onclick="submitReview()">Submit</button>
 </div>
 
 <!-- ⭐ ADMIN PAGE -->
 <div id="admin" class="page">
-  <h3>Admin Panel</h3>
+  <h3>Admin Login</h3>
+
   <input type="password" id="adminPass" placeholder="Enter admin password">
   <button onclick="login()">Login</button>
 
   <div id="adminContent" style="display:none; margin-top:20px;">
+
+    <h3>Admin Dashboard</h3>
+
+    <div id="summaryBox" style="padding:10px; background:white; border-radius:6px; margin-bottom:10px;">
+      <strong>Total Reviews:</strong> <span id="totalReviews"></span><br>
+      <strong>Average Rating:</strong> ⭐ <span id="avgRating"></span>/5
+    </div>
+
+    <input type="text" id="searchBox" placeholder="Search reviews..." onkeyup="searchReviews()">
+
+    <button style="background:green; color:white;" onclick="exportCSV()">Export CSV</button>
+    <button style="background:red; color:white;" onclick="deleteAll()">Delete All Reviews</button>
+
     <h3>All Reviews</h3>
     <div id="reviewsList"></div>
+
   </div>
 </div>
 
@@ -134,14 +158,12 @@
     document.querySelectorAll('.page').forEach(p => p.style.display = "none");
     document.getElementById(page).style.display = "block";
   }
-
   showPage('user');
 
-  /* ⭐ Star Rating Logic */
+  /* ⭐ STAR RATING */
   document.querySelectorAll(".star").forEach(star => {
     star.addEventListener("click", function() {
       selectedRating = parseInt(this.dataset.value);
-
       document.querySelectorAll(".star").forEach(s => {
         s.classList.remove("selected");
         if (parseInt(s.dataset.value) <= selectedRating) {
@@ -151,7 +173,7 @@
     });
   });
 
-  /* ⭐ Submit Review */
+  /* ⭐ SUBMIT REVIEW */
   function submitReview() {
     const text = document.getElementById("reviewText").value.trim();
     if (!text) return alert("Please enter a review!");
@@ -168,36 +190,101 @@
 
     document.getElementById("reviewText").value = "";
     selectedRating = 0;
-
     document.querySelectorAll(".star").forEach(s => s.classList.remove("selected"));
-
     alert("Review submitted!");
   }
 
-  /* ⭐ Admin Login */
+  /* ⭐ LOGIN */
   function login() {
     const pass = document.getElementById("adminPass").value;
     if (pass !== PASSWORD) return alert("Incorrect Password");
+
     document.getElementById("adminContent").style.display = "block";
     loadReviews();
   }
 
-  /* ⭐ Load Reviews */
+  /* ⭐ LOAD REVIEWS */
   function loadReviews() {
     let reviews = JSON.parse(localStorage.getItem("reviews") || "[]");
+
     let html = "";
     reviews.forEach((r, i) => {
       html += `
         <div class="review">
+          <button class="deleteBtn" onclick="deleteReview(${i})">Delete</button>
           <strong>Review #${i+1}</strong><br>
           <small>${r.date}</small><br>
-          <div style="color:#f4c542;">⭐ ${r.rating}/5</div>
-          <br>
+          <div style="color:#f4c542;">⭐ ${r.rating}/5</div><br>
           ${r.text}
         </div>
       `;
     });
+
     document.getElementById("reviewsList").innerHTML = html;
+
+    // Summary
+    document.getElementById("totalReviews").textContent = reviews.length;
+
+    let avg = 0;
+    if (reviews.length > 0) {
+      avg = (reviews.reduce((a,b)=>a+b.rating,0) / reviews.length).toFixed(1);
+    }
+    document.getElementById("avgRating").textContent = avg;
+  }
+
+  /* ⭐ DELETE ONE REVIEW */
+  function deleteReview(index) {
+    let reviews = JSON.parse(localStorage.getItem("reviews") || "[]");
+    reviews.splice(index, 1);
+    localStorage.setItem("reviews", JSON.stringify(reviews));
+    loadReviews();
+  }
+
+  /* ⭐ DELETE ALL */
+  function deleteAll() {
+    if (!confirm("Delete ALL reviews?")) return;
+    localStorage.removeItem("reviews");
+    loadReviews();
+  }
+
+  /* ⭐ SEARCH FILTER */
+  function searchReviews() {
+    let text = document.getElementById("searchBox").value.toLowerCase();
+    let reviews = JSON.parse(localStorage.getItem("reviews") || "[]");
+
+    let filtered = reviews.filter(r => r.text.toLowerCase().includes(text));
+
+    let html = "";
+    filtered.forEach((r, i) => {
+      html += `
+        <div class="review">
+          <strong>${r.date}</strong><br>
+          ⭐ ${r.rating}/5<br><br>
+          ${r.text}
+        </div>
+      `;
+    });
+
+    document.getElementById("reviewsList").innerHTML = html;
+  }
+
+  /* ⭐ EXPORT CSV */
+  function exportCSV() {
+    let reviews = JSON.parse(localStorage.getItem("reviews") || "[]");
+    if (reviews.length === 0) return alert("No reviews to export.");
+
+    let csv = "Date,Rating,Review\n";
+    reviews.forEach(r => {
+      csv += `"${r.date}",${r.rating},"${r.text.replace(/"/g,'""')}"\n`;
+    });
+
+    let blob = new Blob([csv], { type: "text/csv" });
+    let url = URL.createObjectURL(blob);
+
+    let a = document.createElement("a");
+    a.href = url;
+    a.download = "reviews.csv";
+    a.click();
   }
 </script>
 
